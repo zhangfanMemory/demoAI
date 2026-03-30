@@ -1,0 +1,21 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: demoAI
+  ai:
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: my_collection
+        initialize-schema: true  # 自动创建集合
+    # 如果你用 OpenAI 做 Embedding
+    zhipuai:
+      api-key: bd7667624d004aa5ab6fe5ba364dbe2a.mLMDfloL3Uho9odS
+      embedding:
+        options:
+          model: embedding-2  # Kimi Embedding 模型
+      chat:
+        options:
+          model: glm-4  # 对话模型
