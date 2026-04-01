@@ -1,19 +1,28 @@
 package com.boulderai.ai.demoai.service;
+import com.boulderai.ai.demoai.utils.EmbeddingCache;
+import io.qdrant.client.grpc.Points;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.springframework.ai.model.EmbeddingUtils.toList;
 
 @Service
 public class QdrantService {
 
+    private final EmbeddingCache embeddingCache;
     private final VectorStore vectorStore;
 
-    public QdrantService(VectorStore vectorStore) {
+    public QdrantService(VectorStore vectorStore, EmbeddingCache embeddingCache) {
         this.vectorStore = vectorStore;
+        this.embeddingCache = embeddingCache;
+        //this.qdrantClient = extractClient(vectorStore);
     }
 
     // 添加文档
