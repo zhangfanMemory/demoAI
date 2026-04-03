@@ -1,11 +1,15 @@
 package com.boulderai.ai.demoai.service;
 
+import com.google.common.base.Stopwatch;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class DataImportService {
@@ -26,6 +30,49 @@ public class DataImportService {
      * 导入目录下所有文件到 Qdrant
      */
     public void importDirectory(String dirPath) throws Exception {
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        List<FileReaderService.FileDocument> files = fileReaderService.readDirectory(dirPath);
+
+        System.out.println("找到 " + files.size() + " 个文件，开始导入...");
+
+        for (FileReaderService.FileDocument file : files) {
+            // 构建元数据
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("source", file.absolutePath());
+            metadata.put("filename", file.relativePath());
+            metadata.put("type", "file");
+
+            List<String> chunks = slidingWindow(file.content(), 500, 100);
+            System.out.println("多少片"+chunks.size());
+
+            ExecutorService executor = Executors.newFixedThreadPool(10); // 根据实际情况调整线程数
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+            for (int i = 0; i < chunks.size(); i++) {
+                final int index = i;
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    String chunk = chunks.get(index);
+                    System.out.println(chunk.length());
+                    metadata.put("chunk_index", index);
+                    metadata.put("total_chunks", chunks.size());
+                    Document doc = new Document(chunk, metadata);
+                    vectorStore.add(List.of(doc));
+                }, executor);
+                futures.add(future);
+            }
+            System.out.println("已导入: " + file.relativePath() + " (" + chunks.size() + " 块)");
+        }
+
+        stopwatch.stop();
+        System.out.println("导入完成！耗时" + stopwatch.elapsed());
+    }
+
+
+    /**
+     * 导入目录下所有文件到 Qdrant
+     */
+    public void sequential(String dirPath) throws Exception {
+        Stopwatch stopwatch = Stopwatch.createStarted();
         List<FileReaderService.FileDocument> files = fileReaderService.readDirectory(dirPath);
 
         System.out.println("找到 " + files.size() + " 个文件，开始导入...");
@@ -38,7 +85,7 @@ public class DataImportService {
             metadata.put("type", "file");
 
             // 如果文件太大，可以分块
-           // List<String> chunks = splitText(file.content(), 1000); // 每1000字符一块
+            // List<String> chunks = splitText(file.content(), 1000); // 每1000字符一块
 
             List<String> chunks = slidingWindow(file.content(), 500, 100);
             System.out.println("多少片"+chunks.size());
@@ -57,35 +104,9 @@ public class DataImportService {
             System.out.println("已导入: " + file.relativePath() + " (" + chunks.size() + " 块)");
         }
 
-        System.out.println("导入完成！");
+        stopwatch.stop();
+        System.out.println("导入完成！+ 耗时" + stopwatch.elapsed());
     }
-
-   /* *//**
-     * 简单文本分块（可按需改进）
-     *//*
-    private List<String> splitText(String text, int maxLength) {
-        List<String> chunks = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-
-        for (String line : text.split("\n")) {
-            if (current.length() + line.length() > maxLength && current.length() > 0) {
-                chunks.add(current.toString());
-                current = new StringBuilder();
-            }
-            current.append(line).append("\n");
-        }
-
-        if (current.length() > 0) {
-            chunks.add(current.toString());
-        }
-
-        // 如果文本很短，直接返回整体
-        if (chunks.isEmpty()) {
-            chunks.add(text);
-        }
-
-        return chunks;
-    }*/
 
 
     /**

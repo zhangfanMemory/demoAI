@@ -16,7 +16,7 @@ public class ImportController {
     @PostMapping("/directory")
     public String importDirectory(@RequestParam String path) {
         try {
-            importService.importDirectory(path);
+            importService.sequential(path);
             return "导入成功！";
         } catch (Exception e) {
             return "导入失败: " + e.getMessage();

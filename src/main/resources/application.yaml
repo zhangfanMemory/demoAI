@@ -12,7 +12,7 @@ spring:
         initialize-schema: true  # 自动创建集合
     # 如果你用 OpenAI 做 Embedding
     zhipuai:
-      api-key: bd7667624d004aa5ab6fe5ba364dbe2a.mLMDfloL3Uho9odS
+      api-key: ${ZHIPU_API_KEY:}
       embedding:
         options:
           model: embedding-2  # Kimi Embedding 模型
